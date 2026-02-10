@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Digital Impact Hub v32.0</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Fraunces:wght@600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+</head>
+<body x-data="app()" x-init="init()" x-cloak>
+    
+    <!-- Header -->
+    <header class="app-header">
+        <div class="header-brand">
+            <div class="brand-icon">
+                <i class="fas fa-graduation-cap"></i>
+            </div>
+            <div>
+                <h1 class="brand-title">Digital Impact Hub</h1>
+                <p class="brand-version">v32.0 Professional</p>
+            </div>
+        </div>
+        
+        <nav class="main-nav" x-show="fileHandle">
+            <template x-for="item in navItems" :key="item.id">
+                <button @click="switchView(item.id)" 
+                        :class="view === item.id ? 'nav-btn active' : 'nav-btn'"
+                        x-text="item.label">
+                </button>
+            </template>
+        </nav>
+        
+        <div class="header-actions">
+            <template x-if="!fileHandle">
+                <button @click="openFile()" class="btn-primary">
+                    <i class="fas fa-plug"></i> Connect Data
+                </button>
+            </template>
+            <template x-if="fileHandle">
+                <div class="flex gap-3">
+                    <span class="status-live">
+                        <span class="status-dot"></span> LIVE
+                    </span>
+                    <button @click="saveToFile()" class="btn-secondary">
+                        <i class="fas fa-save"></i> Save
+                    </button>
+                </div>
+            </template>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        
+        <!-- Welcome Screen -->
+        <div x-show="!fileHandle" class="welcome-screen">
+            <div class="welcome-card">
+                <div class="welcome-icon">
+                    <i class="fas fa-rocket"></i>
+                </div>
+                <h2>Welcome to Your Digital Hub</h2>
+                <p>Connect to your <strong>digital-coach-data.json</strong> file to access your strategic pillars, projects, and workflow.</p>
+                <button @click="openFile()" class="btn-primary btn-large">
+                    <i class="fas fa-folder-open"></i> Select Local File
+                </button>
+                <p class="welcome-note">Your data stays on your device. No servers, no cloud.</p>
+            </div>
+        </div>
+
+        <!-- Main Views -->
+        <div x-show="fileHandle" class="views-container">
+            
+            <!-- DASHBOARD -->
+            <div x-show="view === 'dashboard'" class="view-dashboard">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon bg-blue">
+                            <i class="fas fa-project-diagram"></i>
+                        </div>
+                        <div class="stat-value" x-text="activeProjectsCount"></div>
+                        <div class="stat-label">Active Projects</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon bg-green">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                        <div class="stat-value" x-text="Math.round(overallProgress) + '%'"></div>
+                        <div class="stat-label">Overall Progress</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon bg-amber">
+                            <i class="fas fa-tasks"></i>
+                        </div>
+                        <div class="stat-value" x-text="openTasksCount"></div>
+                        <div class="stat-label">Open Tasks</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon bg-purple">
+                            <i class="fas fa-calendar-check"></i>
+                        </div>
+                        <div class="stat-value" x-text="weekEventsCount"></div>
+                        <div class="stat-label">This Week</div>
+                    </div>
+                </div>
+
+                <!-- Pillars Overview -->
+                <div class="card">
+                    <h3 class="card-title">Strategic Pillars Overview</h3>
+                    <div class="pillars-grid">
+                        <template x-for="pillar in pillars" :key="pillar.id">
+                            <div class="pillar-card" 
+                                 :style="`border-left-color: ${pillar.color}`"
+                                 @click="filterByPillar(pillar.id)">
+                                <div class="pillar-header">
+                                    <div>
+                                        <h4 x-text="pillar.title"></h4>
+                                        <p x-text="pillar.intent"></p>
+                                    </div>
+                                    <div class="pillar-count" x-text="getProjectsForPillar(pillar.id).length"></div>
+                                </div>
+                                <div class="progress-bar">
+                                    <div class="progress-fill" 
+                                         :style="`width: ${getPillarProgress(pillar.id)}%; background-color: ${pillar.color}`"></div>
+                                </div>
+                                <span class="progress-label" x-text="getPillarProgress(pillar.id) + '%'"></span>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="card">
+                    <h3 class="card-title">Quick Actions</h3>
+                    <div class="quick-actions">
+                        <button @click="startNewProject()" class="quick-action-btn bg-blue">
+                            <i class="fas fa-plus-circle"></i>
+                            <span>New Project</span>
+                        </button>
+                        <button @click="switchView('meetings'); createNewMeeting()" class="quick-action-btn bg-purple">
+                            <i class="fas fa-edit"></i>
+                            <span>Meeting Note</span>
+                        </button>
+                        <button @click="switchView('daily-update')" class="quick-action-btn bg-green">
+                            <i class="fas fa-clipboard-check"></i>
+                            <span>Daily Update</span>
+                        </button>
+                        <button @click="switchView('reports')" class="quick-action-btn bg-amber">
+                            <i class="fas fa-chart-bar"></i>
+                            <span>View Reports</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- DAILY UPDATE VIEW -->
+            <div x-show="view === 'daily-update'" class="view-daily-update">
+                <div class="card">
+                    <div class="card-header">
+                        <h2>Daily Reflection - <span x-text="formatDate(new Date())"></span></h2>
+                        <button @click="saveDailyUpdate()" class="btn-primary">
+                            <i class="fas fa-save"></i> Save Updates
+                        </button>
+                    </div>
+                    <div class="daily-update-table">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Event/Task</th>
+                                    <th>Comments</th>
+                                    <th>Evidence Link</th>
+                                    <th>Impact Statement</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <template x-for="(item, idx) in getDailyItems()" :key="idx">
+                                    <tr>
+                                        <td>
+                                            <strong x-text="item.title"></strong>
+                                            <div class="item-meta" x-text="item.type + ' • ' + item.time"></div>
+                                        </td>
+                                        <td>
+                                            <textarea x-model="item.comments" placeholder="Add comments..." rows="2"></textarea>
+                                        </td>
+                                        <td>
+                                            <input type="url" x-model="item.evidenceLink" placeholder="https://...">
+                                        </td>
+                                        <td>
+                                            <textarea x-model="item.impactStatement" placeholder="Impact achieved..." rows="2"></textarea>
+                                        </td>
+                                        <td>
+                                            <button @click="linkToProject(item)" class="btn-icon" title="Link to Project">
+                                                <i class="fas fa-link"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TIME-BASED PLANNER -->
+            <div x-show="view === 'planner'" class="view-planner">
+                <div class="planner-container">
+                    <!-- Action Hopper Sidebar -->
+                    <div class="action-hopper">
+                        <div class="hopper-header">
+                            <h3>Action Hopper</h3>
+                            <button @click="addTaskModal=true" class="btn-small">
+                                <i class="fas fa-plus"></i> Add
+                            </button>
+                        </div>
+                        <div class="hopper-filters">
+                            <input x-model="hopperSearch" placeholder="Filter..." class="filter-input">
+                            <select x-model="hopperFilter" class="filter-select">
+                                <option value="">All</option>
+                                <option value="strategy">Strategy</option>
+                                <option value="project">Project</option>
+                                <option value="meeting">Meeting</option>
+                                <option value="activity">Activity</option>
+                            </select>
+                        </div>
+                        <div class="hopper-items">
+                            <template x-for="task in filteredHopperTasks" :key="task.id">
+                                <div class="hopper-task" 
+                                     draggable="true"
+                                     @dragstart="dragStart($event, task)"
+                                     :class="task.type">
+                                    <input type="checkbox" x-model="task.completed" @change="completeTask(task)">
+                                    <div class="task-content">
+                                        <div class="task-title" x-text="task.title"></div>
+                                        <div class="task-meta">
+                                            <span class="task-badge" x-text="task.type"></span>
+                                            <span x-show="task.dueDate" class="task-due" x-text="formatDateShort(task.dueDate)"></span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+
+                    <!-- Time-Based Calendar -->
+                    <div class="time-calendar">
+                        <div class="calendar-header">
+                            <h3>Weekly Schedule</h3>
+                            <div class="calendar-controls">
+                                <button @click="previousWeek()" class="btn-icon"><i class="fas fa-chevron-left"></i></button>
+                                <span x-text="getWeekLabel()"></span>
+                                <button @click="nextWeek()" class="btn-icon"><i class="fas fa-chevron-right"></i></button>
+                            </div>
+                        </div>
+                        <div class="calendar-grid">
+                            <!-- Time Labels -->
+                            <div class="time-column">
+                                <div class="time-header"></div>
+                                <template x-for="time in timeSlots" :key="time">
+                                    <div class="time-label" x-text="time"></div>
+                                </template>
+                            </div>
+                            <!-- Day Columns -->
+                            <template x-for="day in weekDays" :key="day">
+                                <div class="day-column">
+                                    <div class="day-header" x-text="day"></div>
+                                    <template x-for="time in timeSlots" :key="time">
+                                        <div class="time-slot"
+                                             @drop="drop($event, day, time)"
+                                             @dragover.prevent
+                                             @dragenter.prevent
+                                             :class="getSlotClass(day, time)">
+                                            <template x-for="event in getEventsForSlot(day, time)" :key="event.id">
+                                                <div class="calendar-event" 
+                                                     :style="`height: ${event.duration * 4}px; background-color: ${getEventColor(event)}`"
+                                                     @click="editEvent(event)"
+                                                     :class="event.type">
+                                                    <div class="event-title" x-text="event.title"></div>
+                                                    <div class="event-time" x-text="event.startTime + ' - ' + event.endTime"></div>
+                                                </div>
+                                            </template>
+                                        </div>
+                                    </template>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- REPORTS VIEW -->
+            <div x-show="view === 'reports'" class="view-reports">
+                <div class="card">
+                    <div class="card-header">
+                        <h2>Reports & Analytics</h2>
+                        <button @click="exportToPDF()" class="btn-primary">
+                            <i class="fas fa-file-pdf"></i> Export PDF
+                        </button>
+                    </div>
+                    
+                    <!-- Report Filters -->
+                    <div class="report-filters">
+                        <select x-model="reportFilter.pillar">
+                            <option value="">All Pillars</option>
+                            <template x-for="p in pillars" :key="p.id">
+                                <option :value="p.id" x-text="p.title"></option>
+                            </template>
+                        </select>
+                        <select x-model="reportFilter.project">
+                            <option value="">All Projects</option>
+                            <template x-for="p in projects" :key="p.id">
+                                <option :value="p.id" x-text="p.title"></option>
+                            </template>
+                        </select>
+                        <select x-model="reportFilter.tlam">
+                            <option value="">All TLAMs</option>
+                            <template x-for="tlam in uniqueTLAMs" :key="tlam">
+                                <option :value="tlam" x-text="tlam"></option>
+                            </template>
+                        </select>
+                        <input type="date" x-model="reportFilter.startDate" placeholder="Start Date">
+                        <input type="date" x-model="reportFilter.endDate" placeholder="End Date">
+                    </div>
+
+                    <!-- Report Content -->
+                    <div id="report-content" class="report-content">
+                        <h3>Executive Summary</h3>
+                        <div class="report-section">
+                            <p>Total Active Projects: <strong x-text="filteredReportProjects.length"></strong></p>
+                            <p>Overall Progress: <strong x-text="Math.round(getFilteredProgress()) + '%'"></strong></p>
+                            <p>Impact Statements Logged: <strong x-text="getTotalImpactStatements()"></strong></p>
+                        </div>
+
+                        <h3>Progress by Pillar</h3>
+                        <template x-for="pillar in pillars" :key="pillar.id">
+                            <div class="report-pillar">
+                                <h4 x-text="pillar.title"></h4>
+                                <div class="progress-bar">
+                                    <div class="progress-fill" :style="`width: ${getPillarProgress(pillar.id)}%; background-color: ${pillar.color}`"></div>
+                                </div>
+                                <p x-text="getPillarProgress(pillar.id) + '%'"></p>
+                            </div>
+                        </template>
+
+                        <h3>Project Details</h3>
+                        <template x-for="project in filteredReportProjects" :key="project.id">
+                            <div class="report-project">
+                                <h4 x-text="project.title"></h4>
+                                <p><strong>Objective:</strong> <span x-text="project.objective"></span></p>
+                                <p><strong>Progress:</strong> <span x-text="calculateProgress(project) + '%'"></span></p>
+                                <p><strong>Impact Statement:</strong> <span x-text="project.impactStatement || 'Not set'"></span></p>
+                                <div class="evidence-list" x-show="project.updates && project.updates.length">
+                                    <strong>Evidence:</strong>
+                                    <ul>
+                                        <template x-for="update in project.updates" :key="update.date">
+                                            <li x-text="formatDate(update.date) + ': ' + update.text"></li>
+                                        </template>
+                                    </ul>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Modals will go here -->
+    <div x-show="showModal" class="modal-overlay" @click.self="showModal = false">
+        <!-- Project Modal, Task Modal, etc. -->
+    </div>
+
+    <!-- Toast Notifications -->
+    <div class="toast-container">
+        <template x-for="toast in toasts" :key="toast.id">
+            <div class="toast" x-text="toast.message"></div>
+        </template>
+    </div>
+
+    <!-- Load JavaScript -->
+    <script src="js/app.js"></script>
+</body>
+</html>
