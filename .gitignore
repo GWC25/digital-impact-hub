@@ -1,0 +1,7 @@
+# Ignore data files
+data/*.json
+digital-coach-data.json
+
+# Ignore OS files
+.DS_Store
+Thumbs.db
