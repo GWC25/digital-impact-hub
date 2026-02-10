@@ -81,15 +81,18 @@ digital-hub-repo/
 
 ## 💾 Data Management
 
-### Connecting Your Data
-1. Click "Connect Data" button in the header
-2. Select your `digital-coach-data.json` file
-3. Your data loads automatically with all features
+### First Time Setup
+1. Download your `digital-coach-data.json` from [the releases page] OR use the sample
+2. Save it to your OneDrive folder (e.g., `OneDrive/Work/digital-coach-data.json`)
+3. Open the app and click "Connect Data"
+4. Browse to your OneDrive file
+5. All changes auto-save to OneDrive!
 
-### Saving Changes
-- Click "Save" button in the header
-- Auto-saves after major operations
-- Your data stays local on your device
+### Daily Use
+- Your data file lives in OneDrive (NOT in the repo)
+- Click "Connect Data" each session
+- Click "Save" to write changes
+- OneDrive syncs automatically to cloud
 
 ### Backup Strategy
 - Keep multiple versions in your file system
